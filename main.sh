@@ -1,5 +1,17 @@
 #!/bin/bash
 
+function get_input_filename {
+    input_file_path=$1
+
+    [[ "$input_file_path" =~ /([^/]*)$ ]] && input_file=${BASH_REMATCH[1]}
+
+    if [[ -z $input_file ]]; then
+	input_file=$input_file_path
+    fi
+
+    echo $input_file
+}
+
 function get_output_dir {
     output_base_dir=$1
 
@@ -46,8 +58,9 @@ function main {
 	exit 1
     fi
 
+    input_filename=$(get_input_filename $input_file)
     output_dir=$(get_output_dir $output_base_dir)
-    output_csv_file=$output_dir"/"$input_file
+    output_csv_file=$output_dir"/"$input_filename
 
     create_dir $output_dir
     copy_file $input_file $output_csv_file
