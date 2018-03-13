@@ -30,7 +30,6 @@ function get_updated_reading_value {
     echo $result
 }
 
-# v -> ü
 function update_reading_column {
     csv_file=$1
     temp_file=$(mktemp)
@@ -42,7 +41,6 @@ function update_reading_column {
 	    continue
 	fi
 
-	col2=$(replace_char $col2 "v" "ü")
         reading_value=$(get_updated_reading_value $col2)
 
 	echo $col1","$reading_value","$rest >> $temp_file

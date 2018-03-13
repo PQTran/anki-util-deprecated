@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# v -> ü
 function transform_vowel {
     word=$1
     vowel=$2
@@ -86,7 +87,7 @@ function transform_vowel {
 		    ;;
 	    esac
 	    ;;
-	ü)
+	v)
 	    case $tone in
 		1)
 		    new_char="ǖ"
