@@ -163,3 +163,16 @@ function get_tone {
 	#     echo "5"
     esac
 }
+
+function get_pinyin_syllables {
+    pinyin_word=$1
+
+    # split syllables
+    while [[ "$pinyin_word" =~ (^[a-z]*[0-9])(.+) ]] ||
+	  [[ "$pinyin_word" =~ (.+) ]]; do
+	syllable=${BASH_REMATCH[1]}
+	echo $syllable
+
+        pinyin_word=${BASH_REMATCH[2]}
+    done
+}

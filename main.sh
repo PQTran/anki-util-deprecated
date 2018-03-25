@@ -19,7 +19,7 @@ function main {
 	exit 1
     fi
 
-    input_filename=$(get_input_filename $input_file)
+    input_filename=$(get_filename $input_file)
     output_dir=$(get_output_dir $output_base_dir)
     output_csv_file=$output_dir"/"$input_filename
 

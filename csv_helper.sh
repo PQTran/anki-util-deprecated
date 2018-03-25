@@ -13,19 +13,11 @@ function get_updated_syllable {
 }
 
 function get_updated_reading_value {
-    pinyin_syllables=$1
+    pinyin_word=$1
 
-    # processes n-1 syllables
-    while [[ "$pinyin_syllables" =~ (^[^0-9]*[0-9])(.+) ]]; do
-	syllable=${BASH_REMATCH[1]}
+    while read -r syllable; do
 	result=$result$(get_updated_syllable $syllable)
-
-        pinyin_syllables=${BASH_REMATCH[2]}
-    done
-
-    # nth syllable
-    syllable=$pinyin_syllables
-    result=$result$(get_updated_syllable $syllable)
+    done < <(get_pinyin_syllables $pinyin_word)
 
     echo $result
 }
@@ -49,14 +41,23 @@ function update_reading_column {
     copy_file $temp_file $csv_file
 }
 
+# make user interupt
 # !!! TODO
 # 3rd tone 3rd tone -> 2nd tone 3rd tone
-# yi1 xx4 -> yi2 xx4
-# yi1 xx1/2/3 -> yi4 xx1/2/3
 function convert_reading_to_pronunciation {
-    reading_cell=$1
+    pinyin_word=$1
 
-    echo $reading_cell
+    while read -r syllable; do
+	current=$syllable
+
+	if [[ "$current" =~ .*3$ ]] && [[ "$result" =~ (.*)3$ ]]; then
+	    result=${BASH_REMATCH[1]}"2"
+	fi
+
+	result=$result$current
+    done < <(get_pinyin_syllables $pinyin_word)
+
+    echo $result
 }
 
 function create_pronunciation_column {

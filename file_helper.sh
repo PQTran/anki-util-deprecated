@@ -1,21 +1,20 @@
 #!/bin/bash
 
-# precondition: / is in file path
-# Ex: ./file or dir/file
-function get_input_filename {
-    input_file_path=$1
+# ex: ./file, dir/file, file
+function get_filename {
+    file=$1
 
-    [[ "$input_file_path" =~ /([^/]*)$ ]] && input_file=${BASH_REMATCH[1]}
-
-    if [[ -z $input_file ]]; then
-	input_file=$input_file_path
+    if [[ "$file" =~ /([^/]*)$ ]]; then
+	file_name=${BASH_REMATCH[1]}
+    else
+	file_name=$file
     fi
 
-    echo $input_file
+    echo $file_name
 }
 
-# default value: generated
-# otherwise: add subdir generated to provided dir
+# default return value: generated
+# add subdir generated to provided dir
 function get_output_dir {
     output_base_dir=$1
 
@@ -23,13 +22,13 @@ function get_output_dir {
 	output_dir="generated"
     else
 	# trim trailing /
-	[[ "$output_base_dir" =~ ^(.*)/$ ]] && trimmed_dir=${BASH_REMATCH[1]}
-
-	if [[ -z $trimmed_dir ]]; then
-	    trimmed_dir=$output_base_dir
+	if [[ "$output_base_dir" =~ ^(.*)/$ ]]; then
+	    output_dir=${BASH_REMATCH[1]}
+	else
+	    output_dir=$output_base_dir
 	fi
 
-	output_dir=$trimmed_dir"/generated"
+	output_dir=$output_dir"/generated"
     fi
 
     echo $output_dir
