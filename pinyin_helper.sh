@@ -164,6 +164,83 @@ function get_tone {
     esac
 }
 
+function get_pinyin_initials {
+    pinyin_initials=$(cat pinyin-initials.txt)
+    echo $pinyin_initials
+}
+
+function get_strict_pinyin_initials {
+    pinyin_initials=$(get_pinyin_initials)
+    result=""
+
+    while [[ "$pinyin_initials" =~ ([a-z]*)\|(.*) ]] ||
+	      [[ "$pinyin_initials" =~ ([a-z]) ]]; do
+	initial=${BASH_REMATCH[1]}
+	pinyin_initials=${BASH_REMATCH[2]}
+
+	if [[ "$initial" =~ [^ng] ]]; then
+	    result=$result$initial"|"
+	fi
+    done
+
+    echo $result
+}
+
+# DISCLAIMER: did not consider final only words, such as ai4
+# parse pinyin_word by getting initial, and some candidate final
+# if candidate final contains n or g, verify with user on syllable
+# outputs to stderr 2 for failed parse
+function get_pinyin_syllables2 {
+    pinyin_word=$1
+    declare -a syllables
+    syllable_index=0
+
+    initial_regex=$(get_pinyin_initials)
+    strict_initial_regex=$(get_strict_pinyin_initials)
+
+    parse_success=0
+    parse_syllable=$pinyin_word
+    while [[ "$parse_syllable" =~ ($initial_regex)(.*) ]]; do
+	initial=${BASH_REMATCH[1]}
+        rest=${BASH_REMATCH[2]}
+
+	if [[ "$rest" =~ ([^1-4$strict_initial_regex]*[1-4]?)(.*) ]]; then
+	    final=${BASH_REMATCH[1]}
+	    pinyin_syllable=$initial$final
+
+	    if [[ "$final" =~ [ng] ]]; then
+
+		output=""
+	        until [[ -n $output ]] && [[ "$pinyin_syllable" =~ ^($output)(.*)$ ]]; do
+		    echo "Please provide first syllable (with tone#) of: "$parse_syllable 1>&2
+		    read output
+		done
+
+		pinyin_syllable=$output
+	    fi
+
+	    syllables[$syllable_index]=$pinyin_syllable
+	    let syllable_index+=1
+
+	    [[ "$parse_syllable" =~ ^($pinyin_syllable)(.*)$ ]]
+	    parse_syllable=${BASH_REMATCH[2]}
+	else
+	    parse_success=1
+	    break
+	fi
+
+    done
+
+    if [[ $parse_success -eq 0 ]]; then
+	for i in $(seq 0 $(expr $syllable_index - 1)); do
+	    echo ${syllables[$i]}
+	done
+    else
+	echo "Was unable to parse syllables of: "$pinyin 1>&2
+	return 1
+    fi
+}
+
 function get_pinyin_syllables {
     pinyin_word=$1
 

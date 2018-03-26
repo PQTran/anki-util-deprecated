@@ -15,9 +15,9 @@ function get_updated_syllable {
 function get_updated_reading_value {
     pinyin_word=$1
 
-    while read -r syllable; do
+    while read -r -u5 syllable; do
 	result=$result$(get_updated_syllable $syllable)
-    done < <(get_pinyin_syllables $pinyin_word)
+    done 5< <(get_pinyin_syllables2 $pinyin_word)
 
     echo $result
 }
@@ -27,7 +27,7 @@ function update_reading_column {
     temp_file=$(mktemp)
     template_row=0
 
-    while IFS=',' read -r col1 col2 rest; do
+    while IFS=',' read -r -u4 col1 col2 rest; do
 	if [[ $template_row -eq 0 ]]; then
 	    let template_row+=1
 	    continue
@@ -36,7 +36,7 @@ function update_reading_column {
         reading_value=$(get_updated_reading_value $col2)
 
 	echo $col1","$reading_value","$rest >> $temp_file
-    done <$csv_file
+    done 4< $csv_file
 
     copy_file $temp_file $csv_file
 }
@@ -47,15 +47,15 @@ function update_reading_column {
 function convert_reading_to_pronunciation {
     pinyin_word=$1
 
-    while read -r syllable; do
-	current=$syllable
+    while read -r -u7 syllable; do
+    	current=$syllable
 
-	if [[ "$current" =~ .*3$ ]] && [[ "$result" =~ (.*)3$ ]]; then
-	    result=${BASH_REMATCH[1]}"2"
-	fi
+    	if [[ "$current" =~ .*3$ ]] && [[ "$result" =~ (.*)3$ ]]; then
+    	    result=${BASH_REMATCH[1]}"2"
+    	fi
 
-	result=$result$current
-    done < <(get_pinyin_syllables $pinyin_word)
+    	result=$result$current
+    done 7< <(get_pinyin_syllables2 $pinyin_word)
 
     echo $result
 }
@@ -65,7 +65,7 @@ function create_pronunciation_column {
     temp_file=$(mktemp)
     template_row=0
 
-    while IFS=',' read -r col1 col2 rest; do
+    while IFS=',' read -r -u6 col1 col2 rest; do
 	if [[ $template_row -eq 0 ]]; then
 	    let template_row+=1
 	    continue
@@ -74,7 +74,8 @@ function create_pronunciation_column {
 	pronunciation_value=$(convert_reading_to_pronunciation $col2)
 
 	echo $col1","$col2","$rest","$pronunciation_value >> $temp_file
-    done <$csv_file
+    done 6< $csv_file
 
     copy_file $temp_file $csv_file
 }
+

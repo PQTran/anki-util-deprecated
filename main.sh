@@ -5,7 +5,7 @@ source ./file_helper.sh
 source ./pinyin_helper.sh
 source ./csv_helper.sh
 
-function main {
+function anki-script-main {
     input_file=$1
     output_base_dir=$2
 
@@ -39,5 +39,5 @@ function main {
 
 # $1: input csv file
 # $2: output directory
-main $1 $2
+anki-script-main $1 $2
 
