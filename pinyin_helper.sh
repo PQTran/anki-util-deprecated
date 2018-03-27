@@ -186,11 +186,12 @@ function get_strict_pinyin_initials {
     echo $result
 }
 
+# error handling is not handled in consumers
 # DISCLAIMER: did not consider final only words, such as ai4
 # parse pinyin_word by getting initial, and some candidate final
 # if candidate final contains n or g, verify with user on syllable
 # outputs to stderr 2 for failed parse
-function get_pinyin_syllables2 {
+function get_pinyin_syllables {
     pinyin_word=$1
     declare -a syllables
     syllable_index=0
@@ -200,11 +201,11 @@ function get_pinyin_syllables2 {
 
     parse_success=0
     parse_syllable=$pinyin_word
-    while [[ "$parse_syllable" =~ ($initial_regex)(.*) ]]; do
+    while [[ "$parse_syllable" =~ ^($initial_regex)(.*)$ ]]; do
 	initial=${BASH_REMATCH[1]}
         rest=${BASH_REMATCH[2]}
 
-	if [[ "$rest" =~ ([^1-4$strict_initial_regex]*[1-4]?)(.*) ]]; then
+	if [[ "$rest" =~ ^([^1-4$strict_initial_regex]+[1-4]?)(.*)$ ]]; then
 	    final=${BASH_REMATCH[1]}
 	    pinyin_syllable=$initial$final
 
@@ -236,20 +237,7 @@ function get_pinyin_syllables2 {
 	    echo ${syllables[$i]}
 	done
     else
-	echo "Was unable to parse syllables of: "$pinyin 1>&2
+	echo "Was unable to parse syllables of: "$pinyin_word 1>&2
 	return 1
     fi
-}
-
-function get_pinyin_syllables {
-    pinyin_word=$1
-
-    # split syllables
-    while [[ "$pinyin_word" =~ (^[a-z]*[0-9])(.+) ]] ||
-	  [[ "$pinyin_word" =~ (.+) ]]; do
-	syllable=${BASH_REMATCH[1]}
-	echo $syllable
-
-        pinyin_word=${BASH_REMATCH[2]}
-    done
 }

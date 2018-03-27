@@ -15,9 +15,10 @@ function get_updated_syllable {
 function get_updated_reading_value {
     pinyin_word=$1
 
+    result=""
     while read -r -u5 syllable; do
 	result=$result$(get_updated_syllable $syllable)
-    done 5< <(get_pinyin_syllables2 $pinyin_word)
+    done 5< <(get_pinyin_syllables $pinyin_word)
 
     echo $result
 }
@@ -41,12 +42,11 @@ function update_reading_column {
     copy_file $temp_file $csv_file
 }
 
-# make user interupt
-# !!! TODO
 # 3rd tone 3rd tone -> 2nd tone 3rd tone
 function convert_reading_to_pronunciation {
     pinyin_word=$1
 
+    result=""
     while read -r -u7 syllable; do
     	current=$syllable
 
@@ -55,7 +55,7 @@ function convert_reading_to_pronunciation {
     	fi
 
     	result=$result$current
-    done 7< <(get_pinyin_syllables2 $pinyin_word)
+    done 7< <(get_pinyin_syllables $pinyin_word)
 
     echo $result
 }
