@@ -67,7 +67,12 @@ function create_pronunciation_column {
 
     while IFS=',' read -r -u6 col1 col2 rest; do
 	if [[ $template_row -eq 0 ]]; then
-	    let template_row+=1
+	    let template_row=1
+	    continue
+	fi
+
+	if [[ -z $col1 ]] ||
+	       [[ -z $col2 ]]; then
 	    continue
 	fi
 

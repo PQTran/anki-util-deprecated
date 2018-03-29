@@ -186,6 +186,58 @@ function get_strict_pinyin_initials {
     echo $result
 }
 
+function _contains_char {
+    string=$1
+
+    [[ "$string" =~ .+ ]]
+}
+
+function _get_pinyin_initial {
+    string=$1
+    initial_regex=$(get_pinyin_initials)
+
+    [[ "$string" =~ ^($initial_regex) ]]
+    echo ${BASH_REMATCH[1]}
+}
+
+function _get_user_response_first_syllable {
+    pinyin_word=$1
+
+    first_syllable=""
+    until [[ -n $first_syllable ]] &&
+	      [[ "$pinyin_word" =~ ^($first_syllable)(.*)$ ]]; do
+	echo "Please provide first syllable (with tone #) of: "$pinyin_word 1>&2
+	read first_syllable
+    done
+
+    echo $first_syllable
+}
+
+function _get_pinyin_final {
+    string=$1
+    strict_intials=$(get_strict_pinyin_initials)
+    final_regex="[^1-4"$strict_intials"]+[1-4]?"
+
+    [[ "$string" =~ ^($final_regex) ]]
+    echo ${BASH_REMATCH[1]}
+}
+
+function _get_rest_of_string {
+    string=$1
+    substring=$2
+
+    [[ "$string" =~ ^$substring(.*) ]]
+    echo ${BASH_REMATCH[1]}
+}
+
+function _syllable_ends_with_either {
+    string=$1
+    chars=$2
+
+    [[ "$final" =~ [$chars] ]] &&
+	[[ "$final" =~ [$chars]+[1-4]?$ ]]
+}
+
 # error handling is not handled in consumers
 # DISCLAIMER: did not consider final only words, such as ai4
 # parse pinyin_word by getting initial, and some candidate final
@@ -196,40 +248,41 @@ function get_pinyin_syllables {
     declare -a syllables
     syllable_index=0
 
-    initial_regex=$(get_pinyin_initials)
-    strict_initial_regex=$(get_strict_pinyin_initials)
-
     parse_success=0
-    parse_syllable=$pinyin_word
-    while [[ "$parse_syllable" =~ ^($initial_regex)(.*)$ ]]; do
-	initial=${BASH_REMATCH[1]}
-        rest=${BASH_REMATCH[2]}
 
-	if [[ "$rest" =~ ^([^1-4$strict_initial_regex]+[1-4]?)(.*)$ ]]; then
-	    final=${BASH_REMATCH[1]}
-	    pinyin_syllable=$initial$final
+    while $(_contains_char $pinyin_word); do
+	initial=$(_get_pinyin_initial $pinyin_word)
+	if [[ -z $initial ]]; then
+	    syllable=$(_get_user_response_first_syllable $pinyin_word)
 
-	    if [[ "$final" =~ [ng] ]]; then
-
-		output=""
-	        until [[ -n $output ]] && [[ "$pinyin_syllable" =~ ^($output)(.*)$ ]]; do
-		    echo "Please provide first syllable (with tone#) of: "$parse_syllable 1>&2
-		    read output
-		done
-
-		pinyin_syllable=$output
-	    fi
-
-	    syllables[$syllable_index]=$pinyin_syllable
+	    syllables[$syllable_index]=$syllable
 	    let syllable_index+=1
+	    pinyin_word=$(_get_rest_of_string $pinyin_word $syllable)
+	    continue
+	fi
 
-	    [[ "$parse_syllable" =~ ^($pinyin_syllable)(.*)$ ]]
-	    parse_syllable=${BASH_REMATCH[2]}
-	else
+        sub_pinyin_word=$(_get_rest_of_string $pinyin_word $initial)
+	final=$(_get_pinyin_final $sub_pinyin_word)
+	if [[ -z $final ]]; then
 	    parse_success=1
 	    break
 	fi
 
+	if [[ $(_syllable_ends_with_either $final "ng") ]]; then
+	    syllable=$(_get_user_response_first_syllable $pinyin_word)
+
+	    syllables[$syllable_index]=$syllable
+	    let syllable_index+=1
+	    pinyin_word=$(_get_rest_of_string $pinyin_word $syllable)
+	    continue
+	fi
+
+	pinyin_syllable=$initial$final
+
+	syllables[$syllable_index]=$pinyin_syllable
+	let syllable_index+=1
+
+	pinyin_word=$(_get_rest_of_string $pinyin_word $pinyin_syllable)
     done
 
     if [[ $parse_success -eq 0 ]]; then
@@ -237,7 +290,7 @@ function get_pinyin_syllables {
 	    echo ${syllables[$i]}
 	done
     else
-	echo "Was unable to parse syllables of: "$pinyin_word 1>&2
+	echo "Was unable to parse syllables of: "$1 1>&2
 	return 1
     fi
 }
