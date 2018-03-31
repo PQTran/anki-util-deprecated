@@ -41,6 +41,7 @@ function update_reading_column {
 
         reading_value=$(get_updated_reading_value $col2)
 
+	echo $col2" -> "$reading_value
 	echo $col1","$reading_value","$rest >> $temp_file
     done 4< $csv_file
 
@@ -83,6 +84,7 @@ function create_pronunciation_column {
 
 	pronunciation_value=$(convert_reading_to_pronunciation $col2)
 
+	echo $col2" -> "$pronunciation_value
 	echo $col1","$col2","$rest","$pronunciation_value >> $temp_file
     done 6< $csv_file
 

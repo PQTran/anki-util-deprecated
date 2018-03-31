@@ -1,9 +1,10 @@
 #!/bin/bash
 
-source ./util_helper.sh
-source ./file_helper.sh
-source ./pinyin_helper.sh
-source ./csv_helper.sh
+source ./helpers/util_helper.sh
+source ./helpers/file_helper.sh
+source ./helpers/pinyin_helper.sh
+source ./helpers/csv_helper.sh
+
 
 function combine_pinyin_audio {
     pinyin_word=$1
