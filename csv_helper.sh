@@ -2,13 +2,18 @@
 
 function get_updated_syllable {
     syllable=$1
+    updated_syllable=$syllable
 
     dominant_vowel=$(get_dominant_vowel $syllable)
     tone=$(get_tone $syllable)
 
-    # trim tone
-    syllable=$(echo $syllable | tr -d "1234")
-    updated_syllable=$(transform_vowel $syllable $dominant_vowel $tone)
+    if [[ -n $dominant_vowel ]] &&
+	   [[ -n $tone ]]; then
+	# trim tone
+	updated_syllable=$(echo $updated_syllable | tr -d "1234")
+	updated_syllable=$(transform_vowel $updated_syllable $dominant_vowel $tone)
+    fi
+
     echo $updated_syllable
 }
 
@@ -17,7 +22,7 @@ function get_updated_reading_value {
 
     result=""
     while read -r -u5 syllable; do
-	result=$result$(get_updated_syllable $syllable)
+    	result=$result$(get_updated_syllable $syllable)
     done 5< <(get_pinyin_syllables $pinyin_word)
 
     echo $result
@@ -42,7 +47,7 @@ function update_reading_column {
     copy_file $temp_file $csv_file
 }
 
-# 3rd tone 3rd tone -> 2nd tone 3rd tone
+# converts: 3rd tone 3rd tone -> 2nd tone 3rd tone
 function convert_reading_to_pronunciation {
     pinyin_word=$1
 

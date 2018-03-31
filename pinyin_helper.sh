@@ -21,6 +21,9 @@ function transform_vowel {
 		4)
 		    new_char="à"
 		    ;;
+		*)
+		    new_char="a"
+		    ;;
 	    esac
 	    ;;
 	o)
@@ -36,6 +39,9 @@ function transform_vowel {
 		    ;;
 		4)
 		    new_char="ò"
+		    ;;
+		*)
+		    new_char="o"
 		    ;;
 	    esac
 	    ;;
@@ -53,6 +59,9 @@ function transform_vowel {
 		4)
 		    new_char="è"
 		    ;;
+		*)
+		    new_char="e"
+		    ;;
 	    esac
 	    ;;
 	i)
@@ -68,6 +77,9 @@ function transform_vowel {
 		    ;;
 		4)
 		    new_char="ì"
+		    ;;
+		*)
+		    new_char="i"
 		    ;;
 	    esac
 	    ;;
@@ -85,6 +97,9 @@ function transform_vowel {
 		4)
 		    new_char="ù"
 		    ;;
+		*)
+		    new_char="u"
+		    ;;
 	    esac
 	    ;;
 	v)
@@ -100,6 +115,9 @@ function transform_vowel {
 		    ;;
 		4)
 		    new_char="ǜ"
+		    ;;
+		*)
+		    new_char="ü"
 		    ;;
 	    esac
 	    ;;
@@ -159,8 +177,9 @@ function get_tone {
 	*4)
 	    echo "4"
 	    ;;
-	# *)
-	#     echo "5"
+	*)
+	    echo ""
+	    ;;
     esac
 }
 
@@ -206,8 +225,9 @@ function _get_user_response_first_syllable {
     first_syllable=""
     until [[ -n $first_syllable ]] &&
 	      [[ "$pinyin_word" =~ ^($first_syllable)(.*)$ ]]; do
-	echo "Please provide first syllable (with tone #) of: "$pinyin_word 1>&2
-	read first_syllable
+	prompt="first syllable of [$pinyin_word]: "
+	read -p "$prompt" first_syllable
+	first_syllable=${first_syllable:-$pinyin_word}
     done
 
     echo $first_syllable
@@ -234,8 +254,7 @@ function _syllable_ends_with_either {
     string=$1
     chars=$2
 
-    [[ "$final" =~ [$chars] ]] &&
-	[[ "$final" =~ [$chars]+[1-4]?$ ]]
+    [[ "$string" =~ [$chars]$ ]]
 }
 
 # error handling is not handled in consumers
@@ -250,7 +269,8 @@ function get_pinyin_syllables {
 
     parse_success=0
 
-    while $(_contains_char $pinyin_word); do
+    # consider caching results of user input
+    while [[ -n $pinyin_word ]] && $(_contains_char $pinyin_word); do
 	initial=$(_get_pinyin_initial $pinyin_word)
 	if [[ -z $initial ]]; then
 	    syllable=$(_get_user_response_first_syllable $pinyin_word)
@@ -262,13 +282,16 @@ function get_pinyin_syllables {
 	fi
 
         sub_pinyin_word=$(_get_rest_of_string $pinyin_word $initial)
+	# takes 1-4 (stops here), or stops at initial (except ng)
 	final=$(_get_pinyin_final $sub_pinyin_word)
 	if [[ -z $final ]]; then
 	    parse_success=1
 	    break
 	fi
 
-	if [[ $(_syllable_ends_with_either $final "ng") ]]; then
+	# if ng found at end, need to verify boundary of syllable
+	# skip verification if last syllable
+	if [[ $initial$final != $pinyin_word ]] && $(_syllable_ends_with_either $final "ng"); then
 	    syllable=$(_get_user_response_first_syllable $pinyin_word)
 
 	    syllables[$syllable_index]=$syllable
