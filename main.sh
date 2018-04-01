@@ -4,6 +4,7 @@ source ./helpers/util_helper.sh
 source ./helpers/file_helper.sh
 source ./helpers/pinyin_helper.sh
 source ./helpers/csv_helper.sh
+source ./helpers/download_helper.sh
 
 
 function combine_pinyin_audio {
@@ -53,75 +54,6 @@ function combine_audio_assets {
 
     done 3< $input_file
 }
-
-function validate_url {
-    url=$1
-
-    response=$(wget -S --spider $url 2>&1)
-
-    if [[ $(echo $response | grep -c 'HTTP/1.1 302 Found') -ge 1 ]]; then
-	return 1
-    fi
-
-    if [[ $(echo $response | grep -c 'HTTP/1.1 200 Found') -ge 1 ]]; then
-	return 1
-    else
-	return 0
-    fi
-}
-
-function download_from_providers {
-    syllable=$1
-    output_dir=$2
-    audio_file=$syllable".mp3"
-    audio_providers="config/audio_providers.config"
-
-    while read -u9 line; do
-	if [[ "$line" =~ ^\+(.*) ]]; then
-	    provider_url=${BASH_REMATCH[1]}
-	    output_file=$output_dir"/"$audio_file
-	    audio_url=$provider_url$audio_file
-
-	    if $(validate_url $audio_url); then
-		wget -nv -O $output_file $audio_url && break
-	    fi
-	fi
-    done 9< $audio_providers
-}
-
-function download_audio_assets {
-    input_file=$1
-    output_dir=$2
-
-    create_dir $output_dir
-
-    template_row=0
-
-    while IFS=',' read -r -u3 col1 col2 col3 col4 col5 col6 col7; do
-	if [[ $template_row -eq 0 ]]; then
-	    let template_row+=1
-	    continue
-	fi
-
-	while read -r -u8 syllable; do
-	    if ! $(download_from_providers $syllable $output_dir); then
-
-		if [[ -z $(get_tone $syllable) ]]; then
-		    download_from_providers $syllable"5" $output_dir
-		    continue
-		fi
-
-		# skip word if unable to download it's component
-		# in future sections, if unable to find the needed filed
-		# we continue to skip
-		break;
-		# action
-	    fi
-	done 8< <(get_pinyin_syllables $col7)
-
-    done 3< $input_file
-}
-
 function anki-script-main {
     input_file=$1
     output_base_dir=$2
