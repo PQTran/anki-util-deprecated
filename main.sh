@@ -68,18 +68,18 @@ function anki-script-main {
 	exit 1
     fi
 
+    # for user prompts
+    exec 3<&0
     input_filename=$(get_filename $input_file)
     output_dir=$(get_output_dir $output_base_dir)
     output_csv_file=$output_dir"/"$input_filename
 
     create_dir $output_dir
-    copy_file $input_file $output_csv_file
+    remove_template_row $input_file $output_csv_file
 
-    # todo: implement logic
-    create_pronunciation_column $output_csv_file
+    create_pinyin_syllables_column $output_csv_file
     update_reading_column $output_csv_file
 
-    # want some helper functions to loop syllables, pinyin_helper
     audio_assets_dir=$output_dir"/audio"
     download_audio_assets $output_csv_file $audio_assets_dir
     combined_audio_dir=$output_dir"/combined_audio"

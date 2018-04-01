@@ -22,13 +22,10 @@ function get_output_dir {
 	output_dir="generated"
     else
 	# trim trailing /
-	if [[ "$output_base_dir" =~ ^(.*)/$ ]]; then
-	    output_dir=${BASH_REMATCH[1]}
-	else
-	    output_dir=$output_base_dir
-	fi
+	[[ "$output_base_dir" =~ ^(.*)/$ ]] &&
+	    output_base_dir=${BASH_REMATCH[1]}
 
-	output_dir=$output_dir"/generated"
+	output_dir=$output_base_dir"/generated"
     fi
 
     echo $output_dir
@@ -45,4 +42,22 @@ function copy_file {
     output_file=$2
 
     cp $input_file $output_file
+}
+
+function remove_template_row {
+    input_file=$1
+    output_file=$2
+    temp_file=$(mktemp)
+
+    template_row=0
+    while IFS=',' read -r line; do
+	if [[ $template_row -eq 0 ]]; then
+	    let template_row+=1
+	    continue
+	fi
+
+	echo $line >> $temp_file
+    done < $input_file
+
+    copy_file $temp_file $output_file
 }

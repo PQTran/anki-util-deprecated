@@ -226,7 +226,7 @@ function _get_user_response_first_syllable {
     until [[ -n $first_syllable ]] &&
 	      [[ "$pinyin_word" =~ ^($first_syllable)(.*)$ ]]; do
 	prompt="first syllable of [$pinyin_word]: "
-	read -p "$prompt" first_syllable
+	read -u 3 -p "$prompt" first_syllable
 	first_syllable=${first_syllable:-$pinyin_word}
     done
 

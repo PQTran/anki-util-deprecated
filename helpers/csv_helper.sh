@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function get_updated_syllable {
+function _get_updated_syllable {
     syllable=$1
     updated_syllable=$syllable
 
@@ -17,13 +17,13 @@ function get_updated_syllable {
     echo $updated_syllable
 }
 
-function get_updated_reading_value {
+function _get_updated_reading_value {
     pinyin_word=$1
 
     result=""
-    while read -r -u5 syllable; do
-    	result=$result$(get_updated_syllable $syllable)
-    done 5< <(get_pinyin_syllables $pinyin_word)
+    while read -r syllable; do
+    	result=$result$(_get_updated_syllable $syllable)
+    done < <(get_pinyin_syllables $pinyin_word)
 
     echo $result
 }
@@ -31,29 +31,22 @@ function get_updated_reading_value {
 function update_reading_column {
     csv_file=$1
     temp_file=$(mktemp)
-    template_row=0
 
-    while IFS=',' read -r -u4 col1 col2 rest; do
-	if [[ $template_row -eq 0 ]]; then
-	    let template_row+=1
-	    continue
-	fi
+    while IFS=',' read -r col1 col2 rest; do
+        reading_value=$(_get_updated_reading_value $col2)
 
-        reading_value=$(get_updated_reading_value $col2)
-
-	echo $col2" -> "$reading_value
 	echo $col1","$reading_value","$rest >> $temp_file
-    done 4< $csv_file
+    done < $csv_file
 
     copy_file $temp_file $csv_file
 }
 
 # converts: 3rd tone 3rd tone -> 2nd tone 3rd tone
-function convert_reading_to_pronunciation {
+function _get_pinyin_syllables_value {
     pinyin_word=$1
 
     result=""
-    while read -r -u7 syllable; do
+    while read -r syllable; do
     	current=$syllable
 
     	if [[ "$current" =~ .*3$ ]] && [[ "$result" =~ (.*)3$ ]]; then
@@ -61,32 +54,26 @@ function convert_reading_to_pronunciation {
     	fi
 
     	result=$result$current
-    done 7< <(get_pinyin_syllables $pinyin_word)
+    done < <(get_pinyin_syllables $pinyin_word)
 
     echo $result
 }
 
-function create_pronunciation_column {
+function create_pinyin_syllables_column {
     csv_file=$1
     temp_file=$(mktemp)
-    template_row=0
 
-    while IFS=',' read -r -u6 col1 col2 rest; do
-	if [[ $template_row -eq 0 ]]; then
-	    let template_row=1
-	    continue
-	fi
-
+    while IFS=',' read -r col1 col2 rest; do
 	if [[ -z $col1 ]] ||
 	       [[ -z $col2 ]]; then
 	    continue
 	fi
 
-	pronunciation_value=$(convert_reading_to_pronunciation $col2)
+	pinyin_syllables_value=$(_get_pinyin_syllables_value $col2)
 
-	echo $col2" -> "$pronunciation_value
-	echo $col1","$col2","$rest","$pronunciation_value >> $temp_file
-    done 6< $csv_file
+	main_cols=$col1","$col2","$rest
+	echo $main_cols","$pinyin_syllables_value >> $temp_file
+    done < $csv_file
 
     copy_file $temp_file $csv_file
 }
