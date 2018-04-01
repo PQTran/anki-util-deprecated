@@ -78,3 +78,24 @@ function create_pinyin_syllables_column {
     copy_file $temp_file $csv_file
 }
 
+function update_sound_column {
+    csv_file=$1
+    audio_dir=$2
+    temp_file=$(mktemp)
+
+    while IFS=',' read -r col1 col2 col3 col4 col5 col6 col7; do
+	begin_cols=$col1","$col2","$col3
+	end_cols=$col5","$col6","$col7
+	audio_file=$col7".mp3"
+
+	if [[ -f $audio_dir"/"$audio_file ]]; then
+	    audio_col="[sound:"$audio_file"]"
+	    echo $begin_cols","$audio_col","$end_cols >> $temp_file
+	else
+	    echo $begin_cols","$col4","$end_cols >> $temp_file
+	fi
+
+    done < $csv_file
+
+    copy_file $temp_file $csv_file
+}

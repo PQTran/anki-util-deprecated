@@ -61,3 +61,55 @@ function remove_template_row {
 
     copy_file $temp_file $output_file
 }
+
+function combine_pinyin_audio {
+    pinyin_word=$1
+    audio_assets_dir=$2
+    output_dir=$3
+
+    temp_file=$(mktemp)
+
+    combine_success=0
+    while read -r syllable; do
+	file_path=$(pwd)"/"$audio_assets_dir"/"$syllable".mp3"
+
+	if ! [[ -f $file_path ]]; then
+	    combine_success=1
+	    break
+	fi
+
+	echo $(printf "file '%s'\n" $file_path) >> $temp_file
+    done < <(get_pinyin_syllables $pinyin_word)
+
+    if [[ $combine_success -eq 0 ]]; then
+	ffmpeg -y -f concat -safe 0 -i $temp_file -c copy $output_dir"/"$pinyin_word".mp3"
+    else
+	echo "Was unable to combine: "$pinyin_word 1>&2
+	return 1
+    fi
+}
+
+function combine_audio_assets {
+    input_file=$1
+    audio_assets_dir=$2
+    output_dir=$3
+
+    create_dir $output_dir
+
+    while IFS=',' read -r col1 col2 col3 col4 col5 col6 col7; do
+	combine_pinyin_audio $col7 $audio_assets_dir $output_dir
+    done < $input_file
+}
+
+function move_audio_assets {
+    csv_file=$1
+    audio_dir=$2
+    output_dir=$3
+
+    while IFS=',' read -r col1 col2 col3 col4 col5 col6 col7; do
+	audio_name=$col7".mp3"
+	if [[ -n $col7 ]]; then
+	    copy_file $audio_dir"/"$audio_name $output_dir"/"$audio_name
+	fi
+    done < $csv_file
+}
