@@ -8,14 +8,13 @@ source ./helpers/download_helper.sh
 
 function anki-script-main {
     input_file=$1
-    output_base_dir=$2
 
     if [[ ! -f $input_file ]]; then
 	echo "Input file does not exist."
 	exit 1
     fi
 
-    if [[ ! "$input_file" =~ \.csv$ ]]; then
+    if ! [[ $input_file =~ \.csv$ ]]; then
 	echo "Input file is not a .csv file."
 	exit 1
     fi
@@ -23,7 +22,7 @@ function anki-script-main {
     # for user prompts
     exec 3<&0
     input_filename=$(get_filename $input_file)
-    output_dir=$(get_output_dir $output_base_dir)
+    output_dir=$(get_output_dir)
     output_csv_file=$output_dir"/"$input_filename
 
     create_dir $output_dir

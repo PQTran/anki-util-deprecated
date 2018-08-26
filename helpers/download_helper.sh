@@ -5,14 +5,15 @@ function validate_url {
 
     response=$(wget -S --spider $url 2>&1)
 
+    # necessary to check this condition or can we consolidate to else branch
     if [[ $(echo $response | grep -c 'HTTP/1.1 302 Found') -ge 1 ]]; then
 	return 1
     fi
 
-    if [[ $(echo $response | grep -c 'HTTP/1.1 200 Found') -ge 1 ]]; then
-	return 1
-    else
+    if [[ $(echo $response | grep -c 'HTTP/1.1 200 OK') -ge 1 ]]; then
 	return 0
+    else
+	return 1
     fi
 }
 
@@ -44,6 +45,10 @@ function download_audio_assets {
     while IFS=',' read -r col1 col2 col3 col4 col5 col6 col7; do
 
 	while read -r syllable; do
+	    if [[ -f "generated/audio/"$syllable".mp3" ]]; then
+	    	continue
+	    fi
+
 	    if ! $(download_from_providers $syllable $output_dir); then
 
 		if [[ -z $(get_tone $syllable) ]]; then

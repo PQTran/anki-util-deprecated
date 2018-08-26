@@ -154,8 +154,8 @@ function get_dominant_vowel {
 	*u*)
 	    echo "u"
 	    ;;
-	*ü*)
-	    echo "ü"
+	*v*)
+	    echo "v"
 	    ;;
 	# *) log error
     esac

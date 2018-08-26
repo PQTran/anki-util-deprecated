@@ -13,22 +13,24 @@ function get_filename {
     echo $file_name
 }
 
-# default return value: generated
-# add subdir generated to provided dir
 function get_output_dir {
-    output_base_dir=$1
-
-    if [[ -z $output_base_dir ]]; then
-	output_dir="generated"
-    else
-	# trim trailing /
-	[[ "$output_base_dir" =~ ^(.*)/$ ]] &&
-	    output_base_dir=${BASH_REMATCH[1]}
-
-	output_dir=$output_base_dir"/generated"
-    fi
+    output_dir="generated"
 
     echo $output_dir
+}
+
+function get_cache_audio_dir {
+    output_dir=$(get_output_dir)
+    cache_audio_dir=$output_dir"/audio"
+
+    echo $cache_audio_dir
+}
+
+function get_cache_combined_audio_dir {
+    cache_audio_dir=$(get_cache_audio_dir)
+    cache_combined_audio_dir=$cache_audio_dir"/combined_audio"
+
+    echo $cache_combined_audio_dir
 }
 
 function create_dir {
@@ -96,8 +98,13 @@ function combine_audio_assets {
 
     create_dir $output_dir
 
-    while IFS=',' read -r col1 col2 col3 col4 col5 col6 col7; do
-	combine_pinyin_audio $col7 $audio_assets_dir $output_dir
+    while IFS=',' read -r col1 col2 col3 col4 col5 col6 audio_name; do
+	combined_audio_dir=$(get_cache_combined_audio_dir)
+	if [[ -f $combined_audio_dir"/"$audio_name".mp3" ]]; then
+	    continue
+	fi
+
+	combine_pinyin_audio $audio_name $audio_assets_dir $output_dir
     done < $input_file
 }
 
@@ -106,9 +113,9 @@ function move_audio_assets {
     audio_dir=$2
     output_dir=$3
 
-    while IFS=',' read -r col1 col2 col3 col4 col5 col6 col7; do
-	audio_name=$col7".mp3"
-	if [[ -n $col7 ]]; then
+    while IFS=',' read -r col1 col2 col3 col4 col5 col6 audio_name; do
+	if [[ -n $audio_name ]]; then
+	    audio_file=$audio_name".mp3"
 	    copy_file $audio_dir"/"$audio_name $output_dir"/"$audio_name
 	fi
     done < $csv_file
