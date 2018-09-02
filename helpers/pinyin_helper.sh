@@ -2,13 +2,14 @@
 
 # v -> ü
 function transform_vowel {
-    word=$1
-    vowel=$2
-    tone=$3
+    local word=$1
+    local vowel=$2
+    local tone=$3
 
-    case $vowel in
+    local new_char
+    case "$vowel" in
 	a)
-	    case $tone in
+	    case "$tone" in
 		1)
 		    new_char="ā"
 		    ;;
@@ -27,7 +28,7 @@ function transform_vowel {
 	    esac
 	    ;;
 	o)
-	    case $tone in
+	    case "$tone" in
 		1)
 		    new_char="ō"
 		    ;;
@@ -46,7 +47,7 @@ function transform_vowel {
 	    esac
 	    ;;
 	e)
-	    case $tone in
+	    case "$tone" in
 		1)
 		    new_char="ē"
 		    ;;
@@ -65,7 +66,7 @@ function transform_vowel {
 	    esac
 	    ;;
 	i)
-	    case $tone in
+	    case "$tone" in
 		1)
 		    new_char="ī"
 		    ;;
@@ -84,7 +85,7 @@ function transform_vowel {
 	    esac
 	    ;;
 	u)
-	    case $tone in
+	    case "$tone" in
 		1)
 		    new_char="ū"
 		    ;;
@@ -103,7 +104,7 @@ function transform_vowel {
 	    esac
 	    ;;
 	v)
-	    case $tone in
+	    case "$tone" in
 		1)
 		    new_char="ǖ"
 		    ;;
@@ -123,197 +124,238 @@ function transform_vowel {
 	    ;;
     esac
 
-    result=$(replace_char $word $vowel $new_char)
-    echo $result
+    local result
+    result="$(replace_char "$word" "$vowel" "$new_char")"
+
+    echo "$result"
 }
 
 # aoeiuv
 # iu or ui makes the second vowel accented
 function get_dominant_vowel {
-    string=$1
+    local string=$1
 
-    case $string in
+    local dominant_vowel
+    case "$string" in
 	*a*)
-	    echo "a"
+	    dominant_vowel="a"
 	    ;;
 	*o*)
-	    echo "o"
+	    dominant_vowel="o"
 	    ;;
 	*e*)
-	    echo "e"
+	    dominant_vowel="e"
 	    ;;
 	*ui*)
-	    echo "i"
+	    dominant_vowel="i"
 	    ;;
 	*iu*)
-	    echo "u"
+	    dominant_vowel="u"
 	    ;;
 	*i*)
-	    echo "i"
+	    dominant_vowel="i"
 	    ;;
 	*u*)
-	    echo "u"
+	    dominant_vowel="u"
 	    ;;
 	*v*)
-	    echo "v"
+	    dominant_vowel="v"
 	    ;;
-	# *) log error
+	*)
+            echo "unable to parse dominant vowel" 1>&2
+            exit 1
     esac
+
+    echo "$dominant_vowel"
 }
 
 function get_tone {
-    pinyin_syllable=$1
+    local pinyin_syllable=$1
 
-    case $pinyin_syllable in
+    local tone
+    case "$pinyin_syllable" in
 	*1)
-	    echo "1"
+	    tone="1"
 	    ;;
 	*2)
-	    echo "2"
+	    tone="2"
 	    ;;
 	*3)
-	    echo "3"
+	    tone="3"
 	    ;;
 	*4)
-	    echo "4"
+	    tone="4"
 	    ;;
 	*)
-	    echo ""
+	    tone=""
 	    ;;
     esac
+
+    echo "$tone"
 }
 
 function get_pinyin_initials {
-    pinyin_initials=$(cat pinyin-initials.txt)
-    echo $pinyin_initials
+    local pinyin_initials
+    pinyin_initials="$(cat "pinyin-initials.txt")"
+
+    echo "$pinyin_initials"
 }
 
 function get_strict_pinyin_initials {
-    pinyin_initials=$(get_pinyin_initials)
+    local pinyin_initials result
+    pinyin_initials="$(get_pinyin_initials)"
     result=""
 
+    local initial pinyin_initials
     while [[ "$pinyin_initials" =~ ([a-z]*)\|(.*) ]] ||
 	      [[ "$pinyin_initials" =~ ([a-z]) ]]; do
-	initial=${BASH_REMATCH[1]}
-	pinyin_initials=${BASH_REMATCH[2]}
+	initial="${BASH_REMATCH[1]}"
+	pinyin_initials="${BASH_REMATCH[2]}"
 
 	if [[ "$initial" =~ [^ng] ]]; then
-	    result=$result$initial"|"
+	    result="$result$initial|"
 	fi
     done
 
-    echo $result
+    echo "$result"
 }
 
 function _contains_char {
-    string=$1
+    local string=$1
 
     [[ "$string" =~ .+ ]]
 }
 
 function _get_pinyin_initial {
-    string=$1
-    initial_regex=$(get_pinyin_initials)
+    local string=$1
+
+    local initial_regex
+    initial_regex="$(get_pinyin_initials)"
 
     [[ "$string" =~ ^($initial_regex) ]]
-    echo ${BASH_REMATCH[1]}
+    echo "${BASH_REMATCH[1]}"
 }
 
 function _get_user_response_first_syllable {
-    pinyin_word=$1
+    local word=$1
+    local first_syllable=""
 
-    first_syllable=""
-    until [[ -n $first_syllable ]] &&
-	      [[ "$pinyin_word" =~ ^($first_syllable)(.*)$ ]]; do
-	prompt="first syllable of [$pinyin_word]: "
-	read -u 3 -p "$prompt" first_syllable
-	first_syllable=${first_syllable:-$pinyin_word}
+    exec 3<&0
+    local prompt="first syllable of [$word]: "
+    while true; do
+	read -r -u 3 -p "$prompt" first_syllable
+
+        if [[ -z "$first_syllable" ]]; then
+            echo "$word"
+            break
+        elif [[ "$word" =~ ^($first_syllable).*$ ]]; then
+            echo "$first_syllable"
+            break
+        else
+            echo "Incorrect input, try again!" 1>&2
+            echo "" 1>&2
+        fi
     done
-
-    echo $first_syllable
 }
 
+
 function _get_pinyin_final {
-    string=$1
-    strict_intials=$(get_strict_pinyin_initials)
-    final_regex="[^1-4"$strict_intials"]+[1-4]?"
+    local string=$1
+
+    local strict_initials
+    strict_initials="$(get_strict_pinyin_initials)"
+    local final_regex="[^1-4$strict_initials]+[1-4]?"
 
     [[ "$string" =~ ^($final_regex) ]]
-    echo ${BASH_REMATCH[1]}
+    local final="${BASH_REMATCH[1]}"
+
+    # because n/g cannot be inital and next to other intial letters
+    [[ "$final" =~ [a-z]+[ng][a-z]+ ]]
+    response=$?
+
+    if [[ "$response" -eq 0 ]]; then
+        echo ""
+    else
+        echo "$final"
+    fi
 }
 
 function _get_rest_of_string {
-    string=$1
-    substring=$2
+    local string=$1
+    local beginning=$2
 
-    [[ "$string" =~ ^$substring(.*) ]]
-    echo ${BASH_REMATCH[1]}
+    [[ "$string" =~ ^$beginning(.*) ]]
+    local rest="${BASH_REMATCH[1]}"
+
+    echo "$rest"
 }
 
 function _syllable_ends_with_either {
-    string=$1
-    chars=$2
+    local string=$1
+    local chars=$2
 
     [[ "$string" =~ [$chars]$ ]]
 }
 
-# error handling is not handled in consumers
-# DISCLAIMER: did not consider final only words, such as ai4
-# parse pinyin_word by getting initial, and some candidate final
-# if candidate final contains n or g, verify with user on syllable
-# outputs to stderr 2 for failed parse
+
+# requires user confirmation:
+# syllables starting with finals, ai4
+# n or g in middle of word without tone (uncommon)
+
+# can be implemented storing results in an array
 function get_pinyin_syllables {
-    pinyin_word=$1
-    declare -a syllables
-    syllable_index=0
+    local word=$1
+    local syllables=""
 
-    parse_success=0
+    while true; do
+        local parse_success=0
 
-    # consider caching results of user input
-    while [[ -n $pinyin_word ]] && $(_contains_char $pinyin_word); do
-	initial=$(_get_pinyin_initial $pinyin_word)
-	if [[ -z $initial ]]; then
-	    syllable=$(_get_user_response_first_syllable $pinyin_word)
+        local initial sub_word final syllable
+        while [[ -n "$word" ]]; do
+	    initial="$(_get_pinyin_initial "$word")"
+	    if [[ -z "$initial" ]]; then
+                parse_success=1
+                break
+            fi
 
-	    syllables[$syllable_index]=$syllable
-	    let syllable_index+=1
-	    pinyin_word=$(_get_rest_of_string $pinyin_word $syllable)
-	    continue
-	fi
+            sub_word="$(_get_rest_of_string "$word" "$initial")"
+            # stops after tone number, or before an initial (except n, ng)
+	    final="$(_get_pinyin_final "$sub_word")"
+	    if [[ -z "$final" ]]; then
+	        parse_success=1
+	        break
+	    fi
 
-        sub_pinyin_word=$(_get_rest_of_string $pinyin_word $initial)
-	# takes 1-4 (stops here), or stops at initial (except ng)
-	final=$(_get_pinyin_final $sub_pinyin_word)
-	if [[ -z $final ]]; then
-	    parse_success=1
-	    break
-	fi
+            # user intercepts if ambiguous syllable
+	    syllable="$initial$final"
+	    if [[ "$syllable" != "$word" ]] &&
+                   _syllable_ends_with_either "$final" "ng"; then
+                parse_success=1
+                break
+	    fi
 
-	# if ng found at end, need to verify boundary of syllable
-	# skip verification if last syllable
-	if [[ $initial$final != $pinyin_word ]] && $(_syllable_ends_with_either $final "ng"); then
-	    syllable=$(_get_user_response_first_syllable $pinyin_word)
+            # update syllables store
+            if [[ -z "$syllables" ]]; then
+                syllables="$syllable"
+            else
+                syllables="$syllables\n$syllable"
+            fi
 
-	    syllables[$syllable_index]=$syllable
-	    let syllable_index+=1
-	    pinyin_word=$(_get_rest_of_string $pinyin_word $syllable)
-	    continue
-	fi
+	    word="$(_get_rest_of_string "$word" "$syllable")"
+        done
 
-	pinyin_syllable=$initial$final
+        if [[ "$parse_success" -eq 0 ]]; then
+            echo -e "$syllables"
+            break
+        else
+	    syllable="$(_get_user_response_first_syllable "$word")"
+	    word="$(_get_rest_of_string "$word" "$syllable")"
 
-	syllables[$syllable_index]=$pinyin_syllable
-	let syllable_index+=1
-
-	pinyin_word=$(_get_rest_of_string $pinyin_word $pinyin_syllable)
+            if [[ -z "$syllables" ]]; then
+                syllables="$syllable"
+            else
+                syllables="$syllables\n$syllable"
+            fi
+        fi
     done
-
-    if [[ $parse_success -eq 0 ]]; then
-	for i in $(seq 0 $(expr $syllable_index - 1)); do
-	    echo ${syllables[$i]}
-	done
-    else
-	echo "Was unable to parse syllables of: "$1 1>&2
-	return 1
-    fi
 }

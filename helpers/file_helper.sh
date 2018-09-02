@@ -1,122 +1,127 @@
 #!/bin/bash
 
-# ex: ./file, dir/file, file
-function get_filename {
-    file=$1
+# ex: ./file, dir/file, file, file.ext
+function get_file_name {
+    local file=$1
 
+    local file_name
     if [[ "$file" =~ /([^/]*)$ ]]; then
-	file_name=${BASH_REMATCH[1]}
+	file_name="${BASH_REMATCH[1]}"
     else
-	file_name=$file
+	file_name="$file"
     fi
 
-    echo $file_name
+    echo "$file_name"
 }
 
-function get_output_dir {
-    output_dir="generated"
+# ex: temp/test.csv, ../test.csv, test.csv
+function get_file_dir_path {
+    local file=$1
 
-    echo $output_dir
+    local dir_path
+    if [[ "$file" =~ (.*)/[^/]*$ ]]; then
+        dir_path="${BASH_REMATCH[1]}"
+    else
+        dir_path="$(pwd)"
+    fi
+
+    echo "$dir_path"
 }
 
-function get_cache_audio_dir {
-    output_dir=$(get_output_dir)
-    cache_audio_dir=$output_dir"/audio"
+function increment_file_name {
+    local file=$1
 
-    echo $cache_audio_dir
-}
+    local file_name dir_path
+    file_name="$(get_file_name "$file")"
+    dir_path="$(get_file_dir_path "$file")"
 
-function get_cache_combined_audio_dir {
-    cache_audio_dir=$(get_cache_audio_dir)
-    cache_combined_audio_dir=$cache_audio_dir"/combined_audio"
+    local index rest_file_name
+    if [[ "$file_name" =~ ^([0-9]*)_(.*) ]]; then
+        index="${BASH_REMATCH[1]}"
+        index=$(("$index" + 1))
 
-    echo $cache_combined_audio_dir
+        rest_file_name="${BASH_REMATCH[2]}"
+    else
+        index="0"
+        rest_file_name="$file_name"
+    fi
+
+    echo "$dir_path/$index""_$rest_file_name"
 }
 
 function create_dir {
-    directory=$1
-    mkdir -p $directory
+    local directory=$1
+    mkdir -p "$directory"
 }
 
 # precondition: input file exists
 function copy_file {
-    input_file=$1
-    output_file=$2
+    local input_file=$1
+    local output_file=$2
 
-    cp $input_file $output_file
-}
-
-function remove_template_row {
-    input_file=$1
-    output_file=$2
-    temp_file=$(mktemp)
-
-    template_row=0
-    while IFS=',' read -r line; do
-	if [[ $template_row -eq 0 ]]; then
-	    let template_row+=1
-	    continue
-	fi
-
-	echo $line >> $temp_file
-    done < $input_file
-
-    copy_file $temp_file $output_file
+    cp "$input_file" "$output_file"
 }
 
 function combine_pinyin_audio {
-    pinyin_word=$1
-    audio_assets_dir=$2
-    output_dir=$3
+    local pinyin=$1
+    local assets_dir=$2
+    local output_dir=$3
 
-    temp_file=$(mktemp)
+    local success=0
 
-    combine_success=0
-    while read -r syllable; do
-	file_path=$(pwd)"/"$audio_assets_dir"/"$syllable".mp3"
+    local audio_paths_file pinyin_syllables
+    audio_paths_file=$(mktemp)
+    pinyin_syllables="$(get_pinyin_syllables "$pinyin")"
 
-	if ! [[ -f $file_path ]]; then
-	    combine_success=1
-	    break
-	fi
+    exec 4<&0
+    local file_path
+    while read -r -u 4 syllable; do
+        # requires full path
+	file_path="$(pwd)/$assets_dir/$syllable.mp3"
 
-	echo $(printf "file '%s'\n" $file_path) >> $temp_file
-    done < <(get_pinyin_syllables $pinyin_word)
+        printf "file '%s'\n" "$file_path" >> "$audio_paths_file"
+    done 4<<< "$pinyin_syllables"
 
-    if [[ $combine_success -eq 0 ]]; then
-	ffmpeg -y -f concat -safe 0 -i $temp_file -c copy $output_dir"/"$pinyin_word".mp3"
+    if [[ "$success" -eq 0 ]]; then
+	ffmpeg -y -f concat -safe 0 -i "$audio_paths_file" -c copy "$output_dir/$pinyin.mp3"
     else
-	echo "Was unable to combine: "$pinyin_word 1>&2
+	echo "Was unable to combine: $pinyin" 1>&2
 	return 1
     fi
 }
 
 function combine_audio_assets {
-    input_file=$1
-    audio_assets_dir=$2
-    output_dir=$3
+    local file=$1
+    local assets_dir=$2
+    local output_dir=$3
 
-    create_dir $output_dir
+    create_dir "$output_dir"
 
-    while IFS=',' read -r col1 col2 col3 col4 col5 col6 audio_name; do
-	combined_audio_dir=$(get_cache_combined_audio_dir)
-	if [[ -f $combined_audio_dir"/"$audio_name".mp3" ]]; then
+    local sandhi_pinyin_values
+    sandhi_pinyin_values="$(awk -F',' '{ print $7 }' "$file")"
+
+    while read -r pinyin; do
+	if [[ -f "$output_file/$pinyin.mp3" ]]; then
 	    continue
 	fi
 
-	combine_pinyin_audio $audio_name $audio_assets_dir $output_dir
-    done < $input_file
+	combine_pinyin_audio "$pinyin" "$assets_dir" "$output_dir"
+    done <<< "$sandhi_pinyin_values"
 }
 
 function move_audio_assets {
-    csv_file=$1
-    audio_dir=$2
-    output_dir=$3
+    local file=$1
+    local audio_dir=$2
+    local output_dir=$3
 
-    while IFS=',' read -r col1 col2 col3 col4 col5 col6 audio_name; do
-	if [[ -n $audio_name ]]; then
-	    audio_file=$audio_name".mp3"
-	    copy_file $audio_dir"/"$audio_name $output_dir"/"$audio_name
-	fi
-    done < $csv_file
+    local audio_files
+    audio_files="$(awk -F',' '{ print $4 }' "$file")"
+
+    while read -r audio_file; do
+
+        if [[ -n "$audio_file" ]]; then
+            copy_file "$audio_dir/$audio_file" "$output_dir"
+        fi
+
+    done <<< "$audio_files"
 }
