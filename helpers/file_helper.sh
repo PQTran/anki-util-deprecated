@@ -73,14 +73,13 @@ function combine_pinyin_audio {
     audio_paths_file=$(mktemp)
     pinyin_syllables="$(get_pinyin_syllables "$pinyin")"
 
-    exec 4<&0
     local file_path
-    while read -r -u 4 syllable; do
+    while read -r syllable; do
         # requires full path
 	file_path="$(pwd)/$assets_dir/$syllable.mp3"
 
         printf "file '%s'\n" "$file_path" >> "$audio_paths_file"
-    done 4<<< "$pinyin_syllables"
+    done <<< "$pinyin_syllables"
 
     if [[ "$success" -eq 0 ]]; then
 	ffmpeg -y -f concat -safe 0 -i "$audio_paths_file" -c copy "$output_dir/$pinyin.mp3"
@@ -100,13 +99,14 @@ function combine_audio_assets {
     local sandhi_pinyin_values
     sandhi_pinyin_values="$(awk -F',' '{ print $7 }' "$file")"
 
-    while read -r pinyin; do
+    exec 4<&0
+    while read -r -u 4 pinyin; do
 	if [[ -f "$output_file/$pinyin.mp3" ]]; then
 	    continue
 	fi
 
 	combine_pinyin_audio "$pinyin" "$assets_dir" "$output_dir"
-    done <<< "$sandhi_pinyin_values"
+    done 4<<< "$sandhi_pinyin_values"
 }
 
 function move_audio_assets {

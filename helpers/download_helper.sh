@@ -42,9 +42,9 @@ function download_from_providers {
     local audio_providers="config/audio_providers.config"
     local audio_file="$syllable.mp3"
 
-    exec 5<&0
+    exec 6<&0
     local audio_url
-    while read -r -u 5 line; do
+    while read -r -u 6 line; do
 	if [[ "$line" =~ ^\+(.*) ]]; then
 	    audio_url="${BASH_REMATCH[1]}/$audio_file"
 
@@ -52,7 +52,7 @@ function download_from_providers {
 	        wget -nv -O "$output_dir/$audio_file" "$audio_url" && break
 	    fi
 	fi
-    done 5< "$audio_providers"
+    done 6< "$audio_providers"
 }
 
 function _download_syllable {
@@ -81,13 +81,14 @@ function download_audio_assets {
     sandhi_pinyin_values="$(awk -F',' '{ print $7 }' "$file")"
 
     exec 4<&0
+    exec 5<&0
     local pinyin_syllables
-    while read -r pinyin; do
+    while read -r -u 4 pinyin; do
         pinyin_syllables="$(get_pinyin_syllables "$pinyin")"
 
-        while read -r -u 4 syllable; do
+        while read -r -u 5 syllable; do
             _download_syllable "$syllable" "$output_dir"
-        done 4<<< "$pinyin_syllables"
+        done 5<<< "$pinyin_syllables"
 
-    done <<< "$sandhi_pinyin_values"
+    done 4<<< "$sandhi_pinyin_values"
 }

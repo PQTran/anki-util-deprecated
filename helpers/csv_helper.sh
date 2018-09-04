@@ -13,6 +13,7 @@ fi
 function remove_template_row {
     local file=$1
     local log_file=$2
+    local result=""
 
     local updated_file
     updated_file="$(increment_file_name "$file")"
@@ -25,9 +26,14 @@ function remove_template_row {
 	    continue
 	fi
 
-	echo "$line" >> "$updated_file"
+        if [[ -z "$result" ]]; then
+            result="$line"
+        else
+            result="$result\n$line"
+        fi
     done < "$file"
 
+    echo -e "$result" > "$updated_file"
     echo "$updated_file"
 }
 
@@ -65,6 +71,7 @@ function _get_updated_pinyin_value {
 function update_pinyin_column {
     local file=$1
     local log_file=$2
+    local result=""
 
     local updated_file
     updated_file="$(increment_file_name "$file")"
@@ -74,9 +81,16 @@ function update_pinyin_column {
     local updated_pinyin
     while IFS=',' read -r -u 6 char_col pinyin_col rest; do
         updated_pinyin="$(_get_updated_pinyin_value "$pinyin_col")"
-        echo "$char_col,$updated_pinyin,$rest" >> "$updated_file"
+
+        updated_line="$char_col,$updated_pinyin,$rest"
+        if [[ -z "$result" ]]; then
+            result="$updated_line"
+        else
+            result="$result\n$updated_line"
+        fi
     done 6< "$file"
 
+    echo -e "$result" > "$updated_file"
     echo "$updated_file"
 }
 
@@ -88,14 +102,13 @@ function _apply_tone_sandhi {
     local pinyin_syllables
     pinyin_syllables="$(get_pinyin_syllables "$pinyin_word")"
 
-    exec 4<&0
-    while read -r -u 4 syllable; do
+    while read -r syllable; do
     	if [[ "$result" =~ (.*)3$ ]] && [[ "$syllable" =~ .*3$ ]]; then
     	    result="${BASH_REMATCH[1]}2"
     	fi
 
     	result="$result$syllable"
-    done 4<<< "$pinyin_syllables"
+    done <<< "$pinyin_syllables"
 
     echo "$result"
 }
@@ -103,13 +116,15 @@ function _apply_tone_sandhi {
 function add_tone_sandhi_pinyin_column {
     local file=$1
     local log_file=$2
+    local result=""
 
     local updated_file
     updated_file="$(increment_file_name "$file")"
     _log_action "$updated_file" "create_pinyin_syllables_column" "$log_file"
 
-    local updated_pinyin_col original_line
-    while IFS=',' read -r char_col pinyin_col rest; do
+    exec 5<&0
+    local updated_pinyin_col
+    while IFS=',' read -r -u 5 char_col pinyin_col rest; do
 	if [[ -z "$char_col" ]] ||
 	       [[ -z "$pinyin_col" ]]; then
 	    continue
@@ -117,10 +132,16 @@ function add_tone_sandhi_pinyin_column {
 
 	updated_pinyin_col="$(_apply_tone_sandhi "$pinyin_col")"
 
-	original_line="$char_col,$pinyin_col,$rest"
-	echo "$original_line,$updated_pinyin_col" >> "$updated_file"
-    done < "$file"
+	updated_line="$char_col,$pinyin_col,$rest,$updated_pinyin_col"
 
+        if [[ -z "$result" ]]; then
+            result="$updated_line"
+        else
+            result="$result\n$updated_line"
+        fi
+    done 5< "$file"
+
+    echo -e "$result" > "$updated_file"
     echo "$updated_file"
 }
 
@@ -128,25 +149,32 @@ function update_sound_column {
     local file=$1
     local audio_dir=$2
     local log_file=$3
+    local result=""
 
     local updated_file
     updated_file="$(increment_file_name "$file")"
     _log_action "$updated_file" "update_sound_column" "$log_file"
 
-    local audio_file
+    local audio_file updated_line
     while read -r line; do
         audio_file="$(echo "$line" | awk -F',' '{ print $7".mp3" }')"
 
         if [[ -f "$audio_dir/$audio_file" ]]; then
-            echo "$line" |
+            updated_line="$(echo "$line" |
                 awk -F',' -v sound_col="$audio_file" \
-                    '{ print $1,$2,$3,sound_col,$5,$6,$7 }' \
-                    >> "$updated_file"
+                    '{ print $1,$2,$3,sound_col,$5,$6,$7 }')"
         else
-            echo "$line" >> "$updated_file"
+            updated_line="$line"
+        fi
+
+        if [[ -z "$result" ]]; then
+            result="$updated_line"
+        else
+            result="$result\n$updated_line"
         fi
 
     done < "$file"
 
+    echo -e "$result" > "$updated_file"
     echo "$updated_file"
 }
