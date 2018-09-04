@@ -264,6 +264,7 @@ function _get_pinyin_final {
 
     local strict_initials
     strict_initials="$(get_strict_pinyin_initials)"
+    # strict finals + n/g + tone
     local final_regex="[^1-4$strict_initials]+[1-4]?"
 
     [[ "$string" =~ ^($final_regex) ]]
@@ -297,6 +298,24 @@ function _syllable_ends_with_either {
     [[ "$string" =~ [$chars]$ ]]
 }
 
+function get_cache {
+    local cache_key=$1
+
+    exec 6<&0
+    while IFS=',' read -r -u 6 key value; do
+        if [[ "$cache_key" == "$key" ]]; then
+            echo "$value"
+            break
+        fi
+    done 6< "$OUTPUT_SYLLABLE_CACHE"
+}
+
+function set_cache {
+    local key=$1
+    local value=$2
+
+    echo "$key,$value" >> "$OUTPUT_SYLLABLE_CACHE"
+}
 
 # requires user confirmation:
 # syllables starting with finals, ai4
@@ -348,7 +367,13 @@ function get_pinyin_syllables {
             echo -e "$syllables"
             break
         else
-	    syllable="$(_get_user_response_first_syllable "$word")"
+            syllable="$(get_cache "$word")"
+
+            if [[ -z "$syllable" ]]; then
+	        syllable="$(_get_user_response_first_syllable "$word")"
+                set_cache "$word" "$syllable"
+            fi
+
 	    word="$(_get_rest_of_string "$word" "$syllable")"
 
             if [[ -z "$syllables" ]]; then

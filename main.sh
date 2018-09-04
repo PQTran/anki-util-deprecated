@@ -16,6 +16,7 @@ OUTPUT_DIR="output"
 OUTPUT_AUDIO_DIR="$OUTPUT_DIR/audio"
 OUTPUT_CSV_DIR="$OUTPUT_DIR/csv"
 OUTPUT_LOG_DIR="$OUTPUT_DIR/logs"
+export OUTPUT_SYLLABLE_CACHE="$OUTPUT_DIR/syllable.cache"
 
 LOG_FILE="$OUTPUT_LOG_DIR/$(date).log"
 
@@ -24,6 +25,8 @@ function setup_output_dir {
     create_dir "$OUTPUT_AUDIO_DIR"
     create_dir "$OUTPUT_CSV_DIR"
     create_dir "$OUTPUT_LOG_DIR"
+    [[ -f "$OUTPUT_SYLLABLE_CACHE" ]] && rm "$OUTPUT_SYLLABLE_CACHE"
+    touch "$OUTPUT_SYLLABLE_CACHE"
 }
 
 function handle_update_csv {
