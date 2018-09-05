@@ -1,5 +1,14 @@
 #!/bin/bash
 
+function get_strict_file_name {
+    local file=$1
+
+    local file_name="$(get_file_name "$file")"
+
+    [[ "$file_name" =~ ([^\.]*)\. ]]
+    echo "${BASH_REMATCH[1]}"
+}
+
 # ex: ./file, dir/file, file, file.ext
 function get_file_name {
     local file=$1
