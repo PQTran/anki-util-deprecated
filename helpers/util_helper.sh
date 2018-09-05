@@ -18,6 +18,7 @@ function _get_user_response_move {
     until [[ "$response" =~ [ynN] ]]; do
     	read -r -u 3 -p "Move to Anki directory? [y/N]: " response
     done
+    exec 3>&-
 
     [[ "$response" =~ y ]]
 }

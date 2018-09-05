@@ -256,6 +256,7 @@ function _get_user_response_first_syllable {
             echo "" 1>&2
         fi
     done
+    exec 3>&-
 }
 
 
@@ -308,6 +309,7 @@ function get_cache {
             break
         fi
     done 6< "$OUTPUT_SYLLABLE_CACHE"
+    exec 6>&-
 }
 
 function set_cache {

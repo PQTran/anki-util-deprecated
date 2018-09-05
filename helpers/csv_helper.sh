@@ -64,6 +64,7 @@ function _get_updated_pinyin_value {
     while read -r -u 5 syllable; do
     	result="$result$(_get_updated_syllable "$syllable")"
     done 5<<< "$pinyin_syllables"
+    exec 5>&-
 
     echo "$result"
 }
@@ -89,6 +90,7 @@ function update_pinyin_column {
             result="$result\n$updated_line"
         fi
     done 6< "$file"
+    exec 6>&-
 
     echo -e "$result" > "$updated_file"
     echo "$updated_file"
@@ -140,6 +142,7 @@ function add_tone_sandhi_pinyin_column {
             result="$result\n$updated_line"
         fi
     done 5< "$file"
+    exec 5>&-
 
     echo -e "$result" > "$updated_file"
     echo "$updated_file"

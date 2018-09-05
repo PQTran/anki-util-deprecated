@@ -53,6 +53,7 @@ function download_from_providers {
 	    fi
 	fi
     done 6< "$audio_providers"
+    exec 6>&-
 }
 
 function _download_syllable {
@@ -91,4 +92,6 @@ function download_audio_assets {
         done 5<<< "$pinyin_syllables"
 
     done 4<<< "$sandhi_pinyin_values"
+    exec 5>&-
+    exec 4>&-
 }

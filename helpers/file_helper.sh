@@ -107,6 +107,7 @@ function combine_audio_assets {
 
 	combine_pinyin_audio "$pinyin" "$assets_dir" "$output_dir"
     done 4<<< "$sandhi_pinyin_values"
+    exec 4>&-
 }
 
 function move_audio_assets {
