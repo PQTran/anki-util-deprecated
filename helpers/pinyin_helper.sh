@@ -1,131 +1,95 @@
 #!/bin/bash
 
-# v -> ü
-function transform_vowel {
+if [[ -z "$HELPERS_DIR" ]]; then
+    HELPERS_DIR="../helpers"
+fi
+
+PINYIN_ACCENTS_MAP="$HELPERS_DIR/pinyin-vowels.txt"
+
+function _get_all_accent_characters {
+    exec 9<&0
+
+    local result=""
+    while IFS=',' read -r -u 9 pinyin char; do
+        result="$result$char"
+    done 9< "$PINYIN_ACCENTS_MAP"
+    exec 9<&-
+
+    echo "$result"
+}
+
+function _get_accent_character {
+    local vowel=$1
+    local tone=$2
+
+    exec 9<&0
+    local result=""
+    while IFS=',' read -r -u 9 key accent_char; do
+        if [[ "$vowel$tone" == "$key" ]]; then
+            result="$accent_char"
+        fi
+    done 9< "$PINYIN_ACCENTS_MAP"
+    exec 9<&-
+
+    echo "$result"
+}
+
+function _get_pinyin_character {
+    local accent=$1
+
+    exec 9<&0
+    local result=""
+    while IFS=',' read -r -u 9 pinyin key; do
+        if [[ "$accent" == "$key" ]]; then
+            result="$pinyin"
+        fi
+    done 9< "$HELPERS_DIR/pinyin-vowels.txt"
+    exec 9<&-
+
+    echo "$result"
+}
+
+function accent_vowel {
     local word=$1
     local vowel=$2
     local tone=$3
 
-    local new_char
-    case "$vowel" in
-	a)
-	    case "$tone" in
-		1)
-		    new_char="ā"
-		    ;;
-		2)
-		    new_char="á"
-		    ;;
-		3)
-		    new_char="ă"
-		    ;;
-		4)
-		    new_char="à"
-		    ;;
-		*)
-		    new_char="a"
-		    ;;
-	    esac
-	    ;;
-	o)
-	    case "$tone" in
-		1)
-		    new_char="ō"
-		    ;;
-		2)
-		    new_char="ó"
-		    ;;
-		3)
-		    new_char="ǒ"
-		    ;;
-		4)
-		    new_char="ò"
-		    ;;
-		*)
-		    new_char="o"
-		    ;;
-	    esac
-	    ;;
-	e)
-	    case "$tone" in
-		1)
-		    new_char="ē"
-		    ;;
-		2)
-		    new_char="é"
-		    ;;
-		3)
-		    new_char="ě"
-		    ;;
-		4)
-		    new_char="è"
-		    ;;
-		*)
-		    new_char="e"
-		    ;;
-	    esac
-	    ;;
-	i)
-	    case "$tone" in
-		1)
-		    new_char="ī"
-		    ;;
-		2)
-		    new_char="í"
-		    ;;
-		3)
-		    new_char="ĭ"
-		    ;;
-		4)
-		    new_char="ì"
-		    ;;
-		*)
-		    new_char="i"
-		    ;;
-	    esac
-	    ;;
-	u)
-	    case "$tone" in
-		1)
-		    new_char="ū"
-		    ;;
-		2)
-		    new_char="ú"
-		    ;;
-		3)
-		    new_char="ŭ"
-		    ;;
-		4)
-		    new_char="ù"
-		    ;;
-		*)
-		    new_char="u"
-		    ;;
-	    esac
-	    ;;
-	v)
-	    case "$tone" in
-		1)
-		    new_char="ǖ"
-		    ;;
-		2)
-		    new_char="ǘ"
-		    ;;
-		3)
-		    new_char="ǚ"
-		    ;;
-		4)
-		    new_char="ǜ"
-		    ;;
-		*)
-		    new_char="ü"
-		    ;;
-	    esac
-	    ;;
-    esac
+    local accent_char
+    accent_char="$(_get_accent_character "$vowel" "$tone")"
 
     local result
-    result="$(replace_char "$word" "$vowel" "$new_char")"
+    result="$(replace_char "$word" "$vowel" "$accent_char")"
+
+    echo "$result"
+}
+
+# does not properly place tone at end of syllable
+function get_pinyin_from_accent_word {
+    local accent_word=$1
+
+    local accent_regex
+    accent_regex="$(_get_all_accent_characters)"
+
+    local result=""
+    local head_str accent_char tail_str
+    while true; do
+        [[ "$accent_word" =~ (^[^$accent_regex]+)([$accent_regex])(.*) ]]
+
+        head_str="${BASH_REMATCH[1]}"
+        accent_char="${BASH_REMATCH[2]}"
+        tail_str="${BASH_REMATCH[3]}"
+
+        pinyin="$(_get_pinyin_character "$accent_char")"
+        result="$result$head_str$pinyin"
+
+        if [[ "$tail_str" =~ [$accent_regex] ]]; then
+            accent_word="$tail_str"
+        else
+            result="$result$tail_str"
+            break
+        fi
+
+    done
 
     echo "$result"
 }
@@ -194,6 +158,24 @@ function get_tone {
     echo "$tone"
 }
 
+function update_pinyin {
+    local syllable=$1
+    local vowel=$2
+    local tone=$3
+
+    if [[ -z "$vowel" ]] ||
+	   [[ -z "$tone" ]]; then
+        exit 1
+    fi
+
+    syllable="${syllable::-1}"
+
+    local result
+    result="$(accent_vowel "$syllable" "$dominant_vowel" "$tone")"
+
+    echo "$result"
+}
+
 function get_pinyin_initials {
     local pinyin_initials
     pinyin_initials="$(cat "$HELPERS_DIR/pinyin-initials.txt")"
@@ -213,7 +195,11 @@ function get_strict_pinyin_initials {
 	pinyin_initials="${BASH_REMATCH[2]}"
 
 	if [[ "$initial" =~ [^ng] ]]; then
-	    result="$result$initial|"
+            if [[ -z "$result" ]]; then
+                result="$initial"
+            else
+	        result="$result|$initial"
+            fi
 	fi
     done
 
@@ -260,19 +246,25 @@ function _get_user_response_first_syllable {
 }
 
 
+# assumption input does not start with initial
+# must change to operate on normal string
+
+# check for ng[1-4] final
+# if ambiguous final, return empty string / fail
 function _get_pinyin_final {
-    local string=$1
+    local substring=$1
 
     local strict_initials
     strict_initials="$(get_strict_pinyin_initials)"
-    # strict finals + n/g + tone
+    # (strict finals + n/g) + tone?
     local final_regex="[^1-4$strict_initials]+[1-4]?"
 
-    [[ "$string" =~ ^($final_regex) ]]
+    [[ "$substring" =~ ^($final_regex) ]]
     local final="${BASH_REMATCH[1]}"
 
-    # because n/g cannot be inital and next to other intial letters
-    [[ "$final" =~ [a-z]+[ng][a-z]+ ]]
+    # must check the condition where intials exist
+    # before and after n|g
+    [[ "$final" =~ [$strict_initials]+[ng][$strict_initials]+ ]]
     response=$?
 
     if [[ "$response" -eq 0 ]]; then

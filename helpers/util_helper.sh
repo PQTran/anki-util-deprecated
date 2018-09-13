@@ -6,7 +6,7 @@ function replace_char {
     local new_char=$3
 
     local result
-    result=$(echo "$word" | sed -e "y/$vowel/$new_char/")
+    result="$(echo "$word" | sed -e "y/$vowel/$new_char/")"
 
     echo "$result"
 }

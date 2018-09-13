@@ -76,16 +76,33 @@ function combine_pinyin_audio {
     local assets_dir=$2
     local output_dir=$3
 
+    if [[ -z "$pinyin" ]] ||
+           [[ -z "$assets_dir" ]] ||
+           [[ -z "$output_dir" ]]; then
+        return 1
+    fi
+
     local success=0
 
-    local audio_paths_file pinyin_syllables
-    audio_paths_file=$(mktemp)
+    local audio_paths_file pinyin_syllables main_dir
+    audio_paths_file="$(mktemp)"
     pinyin_syllables="$(get_pinyin_syllables "$pinyin")"
+    main_dir="$(pwd)"
 
-    local file_path
+    local file_path tone
     while read -r syllable; do
+        tone="$(get_tone "$syllable")"
+        if [[ -z "$tone" ]] &&
+               ! [[ -f "$main_dir/$assets_dir/$syllable.mp3" ]]; then
+            syllable+="5"
+        fi
+
+        if ! [[ -f "$main_dir/$assets_dir/$syllable.mp3" ]]; then
+            return 1
+        fi
+
         # requires full path
-	file_path="$(pwd)/$assets_dir/$syllable.mp3"
+	file_path="$main_dir/$assets_dir/$syllable.mp3"
 
         printf "file '%s'\n" "$file_path" >> "$audio_paths_file"
     done <<< "$pinyin_syllables"
@@ -110,7 +127,7 @@ function combine_audio_assets {
 
     exec 4<&0
     while read -r -u 4 pinyin; do
-	if [[ -f "$output_file/$pinyin.mp3" ]]; then
+	if [[ -f "$output_dir/$pinyin.mp3" ]]; then
 	    continue
 	fi
 

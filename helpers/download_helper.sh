@@ -60,10 +60,16 @@ function _download_syllable {
     local syllable=$1
     local output_dir=$2
 
+    if [[ -z "$(get_tone "$syllable")" ]] &&
+           [[ -f "$output_dir/$syllable""5.mp3" ]]; then
+        return 0
+    fi
+
     if [[ -f "$output_dir/$syllable.mp3" ]]; then
         return 0
     fi
 
+    # needs improvement, consolidate cases
     download_from_providers "$syllable" "$output_dir"
     result=$?
 

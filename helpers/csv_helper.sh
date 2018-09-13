@@ -5,9 +5,12 @@ if [[ -n "$HELPERS_DIR" ]]; then
     source "$HELPERS_DIR/file_helper.sh"
     # shellcheck source=./util_helper.sh
     source "$HELPERS_DIR/util_helper.sh"
+    # shellcheck source=./pinyin_helper.sh
+    source "$HELPERS_DIR/pinyin_helper.sh"
 else
     source "./file_helper.sh"
     source "./util_helper.sh"
+    source "./pinyin_helper.sh"
 fi
 
 function remove_template_row {
@@ -44,14 +47,10 @@ function _get_updated_syllable {
     dominant_vowel="$(get_dominant_vowel "$syllable")"
     tone="$(get_tone "$syllable")"
 
-    if [[ -n "$dominant_vowel" ]] &&
-	   [[ -n "$tone" ]]; then
-	# trim tone
-        syllable="$(echo "$syllable" | tr -d "1234")"
-        syllable="$(transform_vowel "$syllable" "$dominant_vowel" "$tone")"
-    fi
+    local updated_syllable
+    updated_syllable="$(update_pinyin "$syllable" "$dominant_vowel" "$tone")"
 
-    echo "$syllable"
+    echo "$updated_syllable"
 }
 
 function _get_updated_pinyin_value {
@@ -105,8 +104,9 @@ function _apply_tone_sandhi {
     pinyin_syllables="$(get_pinyin_syllables "$pinyin_word")"
 
     while read -r syllable; do
-    	if [[ "$result" =~ (.*)3$ ]] && [[ "$syllable" =~ .*3$ ]]; then
-    	    result="${BASH_REMATCH[1]}2"
+    	if [[ $(get_tone "$result") -eq 3 ]] &&
+               [[ $(get_tone "$syllable") -eq 3 ]]; then
+            result="${result::-1}2"
     	fi
 
     	result="$result$syllable"
@@ -165,7 +165,7 @@ function update_sound_column {
         if [[ -f "$audio_dir/$audio_file" ]]; then
             updated_line="$(echo "$line" |
                 awk -F',' -v sound_col="$audio_file" \
-                    '{ print $1,$2,$3,sound_col,$5,$6,$7 }')"
+                    '{ print $1","$2","$3","sound_col","$5","$6","$7 }')"
         else
             updated_line="$line"
         fi
