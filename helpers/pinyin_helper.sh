@@ -196,7 +196,7 @@ function get_tone {
 
 function get_pinyin_initials {
     local pinyin_initials
-    pinyin_initials="$(cat "pinyin-initials.txt")"
+    pinyin_initials="$(cat "$HELPERS_DIR/pinyin-initials.txt")"
 
     echo "$pinyin_initials"
 }

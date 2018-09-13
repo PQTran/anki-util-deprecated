@@ -45,7 +45,7 @@ function transform_deck {
 
 function main {
     local deck=$1
-    local template_file="temp/deck-template.csv"
+    local template_file="$HELPERS_DIR/deck-template.csv"
 
     if [[ ! -f "$deck" ]]; then
         echo "File does not exist" 1>&2
