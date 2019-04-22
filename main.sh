@@ -20,6 +20,16 @@ export OUTPUT_SYLLABLE_CACHE="$OUTPUT_DIR/syllable.cache"
 
 LOG_FILE="$OUTPUT_LOG_DIR/$(date).log"
 
+
+# To do list:
+# functions references files relative to directory is defined or not
+# Cleanup last column in output, unless in debug mode
+# validation page before downloading
+# download_from_providers: check if a single provider covers all syllables
+# download_audio_assets: error message on failed download
+# google as audio provider for audio https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=%E4%B8%8D%E5%A5%BD%E6%84%8F%E6%80%9D&tl=zh-CN
+# make all references to files relative to base of script
+# properly close fd
 function setup_output_dir {
     create_dir "$OUTPUT_DIR"
     create_dir "$OUTPUT_AUDIO_DIR"
@@ -34,7 +44,6 @@ function handle_update_csv {
     local updated_file
 
     updated_file="$(remove_template_row "$file" "$LOG_FILE")"
-
     updated_file="$(add_tone_sandhi_pinyin_column "$updated_file" "$LOG_FILE")"
     updated_file="$(update_pinyin_column "$updated_file" "$LOG_FILE")"
 
@@ -90,10 +99,11 @@ function anki-script-main {
     response=$?
 
     if [[ "$response" -eq 0 ]]; then
-        handle_move_audio "$updated_file"
+        updated_file="$(handle_move_audio "$updated_file")"
     fi
 
     # cleanup last column
+    updated_file="$(remove_sandhi_column "$updated_file" "$LOG_FILE")"
 
     echo "Script is complete! Enjoy!"
 }

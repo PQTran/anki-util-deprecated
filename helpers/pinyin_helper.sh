@@ -163,15 +163,15 @@ function update_pinyin {
     local vowel=$2
     local tone=$3
 
-    if [[ -z "$vowel" ]] ||
-	   [[ -z "$tone" ]]; then
+    if [[ -z "$vowel" ]]; then
         exit 1
     fi
 
-    syllable="${syllable::-1}"
+    [[ "$syllable" =~ ([a-z]*)[1-4]? ]]
+    local no_tone_syllable="${BASH_REMATCH[1]}"
 
     local result
-    result="$(accent_vowel "$syllable" "$dominant_vowel" "$tone")"
+    result="$(accent_vowel "$no_tone_syllable" "$dominant_vowel" "$tone")"
 
     echo "$result"
 }

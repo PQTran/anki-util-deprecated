@@ -165,7 +165,7 @@ function update_sound_column {
         if [[ -f "$audio_dir/$audio_file" ]]; then
             updated_line="$(echo "$line" |
                 awk -F',' -v sound_col="$audio_file" \
-                    '{ print $1","$2","$3","sound_col","$5","$6","$7 }')"
+                    '{ print $1","$2","$3",[sound:"sound_col"],"$5","$6","$7 }')"
         else
             updated_line="$line"
         fi
@@ -177,6 +177,33 @@ function update_sound_column {
         fi
 
     done < "$file"
+
+    echo -e "$result" > "$updated_file"
+    echo "$updated_file"
+}
+
+function remove_sandhi_column {
+    local file=$1
+    local log_file=$2
+    local result=""
+
+    local updated_file
+    updated_file="$(increment_file_name "$file")"
+    _log_action "$updated_file" "remove_sandhi_column" "$log_file"
+
+    local updated_line
+    exec 6<&0
+    while IFS=',' read -r -u 6 line; do
+        updated_line="$(echo "$line" |
+                           awk -F',' '{ print $1","$2","$3","$4","$5","$6 }')"
+
+        if [[ -z "$result" ]]; then
+            result="$updated_line"
+        else
+            result="$result\n$updated_line"
+        fi
+    done 6< "$file"
+    exec 6>&-
 
     echo -e "$result" > "$updated_file"
     echo "$updated_file"

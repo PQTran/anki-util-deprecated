@@ -69,6 +69,7 @@ function _download_syllable {
         return 0
     fi
 
+    # seems that 2 download attempts are made.. needs improvements
     # needs improvement, consolidate cases
     download_from_providers "$syllable" "$output_dir"
     result=$?

@@ -142,7 +142,8 @@ function move_audio_assets {
     local output_dir=$3
 
     local audio_files
-    audio_files="$(awk -F',' '{ print $4 }' "$file")"
+    # removes [sound: and ]
+    audio_files="$(awk -F',' '{ print substr($4, 8, length($4) - 8) }' "$file")"
 
     while read -r audio_file; do
 
