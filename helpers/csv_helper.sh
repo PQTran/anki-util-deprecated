@@ -119,6 +119,8 @@ function add_tone_sandhi_pinyin_column {
     local file=$1
     local log_file=$2
     local result=""
+    local sound=""
+    local bookid=""
 
     local updated_file
     updated_file="$(increment_file_name "$file")"
@@ -126,7 +128,7 @@ function add_tone_sandhi_pinyin_column {
 
     exec 5<&0
     local updated_pinyin_col
-    while IFS=',' read -r -u 5 char_col pinyin_col rest; do
+    while IFS=',' read -r -u 5 char_col pinyin_col def_col notes rest; do
 	if [[ -z "$char_col" ]] ||
 	       [[ -z "$pinyin_col" ]]; then
 	    continue
@@ -134,7 +136,7 @@ function add_tone_sandhi_pinyin_column {
 
 	updated_pinyin_col="$(_apply_tone_sandhi "$pinyin_col")"
 
-	updated_line="$char_col,$pinyin_col,$rest,$updated_pinyin_col"
+	updated_line="$char_col,$pinyin_col,$def_col,$sound,$bookid,$notes,$updated_pinyin_col"
 
         if [[ -z "$result" ]]; then
             result="$updated_line"

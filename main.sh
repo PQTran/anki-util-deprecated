@@ -64,6 +64,7 @@ function handle_move_audio {
     # !!! remove hard coded + provide prompt w/ nav capabilities
     anki_audio_dir="../../.local/share/Anki2/pqtran/collection.media"
 
+    # !!! update sound column regardless audio moved or not?
     updated_file="$(update_sound_column "$file" "$OUTPUT_AUDIO_DIR" "$LOG_FILE")"
     move_audio_assets "$updated_file" "$OUTPUT_AUDIO_DIR" "$anki_audio_dir"
 
@@ -75,13 +76,13 @@ function anki-script-main {
     local updated_file
 
     if ! [[ -f "$input_file" ]]; then
-	echo "Input file does not exist."
-	exit 1
+        echo "Input file does not exist."
+        exit 1
     fi
 
     if ! [[ "$input_file" =~ \.csv$ ]]; then
-	echo "Input file is not a .csv file."
-	exit 1
+        echo "Input file is not a .csv file."
+        exit 1
     fi
 
     local input_file_name

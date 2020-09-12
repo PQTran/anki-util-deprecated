@@ -15,9 +15,9 @@ function get_file_name {
 
     local file_name
     if [[ "$file" =~ /([^/]*)$ ]]; then
-	file_name="${BASH_REMATCH[1]}"
+        file_name="${BASH_REMATCH[1]}"
     else
-	file_name="$file"
+        file_name="$file"
     fi
 
     echo "$file_name"
@@ -102,16 +102,16 @@ function combine_pinyin_audio {
         fi
 
         # requires full path
-	file_path="$main_dir/$assets_dir/$syllable.mp3"
+        file_path="$main_dir/$assets_dir/$syllable.mp3"
 
         printf "file '%s'\n" "$file_path" >> "$audio_paths_file"
     done <<< "$pinyin_syllables"
 
     if [[ "$success" -eq 0 ]]; then
-	ffmpeg -y -f concat -safe 0 -i "$audio_paths_file" -c copy "$output_dir/$pinyin.mp3"
+        ffmpeg -y -f concat -safe 0 -i "$audio_paths_file" -c copy "$output_dir/$pinyin.mp3"
     else
-	echo "Was unable to combine: $pinyin" 1>&2
-	return 1
+        echo "Was unable to combine: $pinyin" 1>&2
+        return 1
     fi
 }
 
@@ -127,11 +127,11 @@ function combine_audio_assets {
 
     exec 4<&0
     while read -r -u 4 pinyin; do
-	if [[ -f "$output_dir/$pinyin.mp3" ]]; then
-	    continue
-	fi
+        if [[ -f "$output_dir/$pinyin.mp3" ]]; then
+            continue
+        fi
 
-	combine_pinyin_audio "$pinyin" "$assets_dir" "$output_dir"
+        combine_pinyin_audio "$pinyin" "$assets_dir" "$output_dir"
     done 4<<< "$sandhi_pinyin_values"
     exec 4>&-
 }
